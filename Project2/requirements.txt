@@ -24,3 +24,4 @@ lxml
 html5lib
 pytesseract
 pillow
+selenium
