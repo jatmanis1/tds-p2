@@ -271,13 +271,23 @@ def handle_captcha_form(session: requests.Session, url: str, html: str) -> str:
         raise RuntimeError(f"Form submission error: {str(e)}. Response code: {getattr(resp, 'status_code', 'N/A')}")
 
 
+import requests
+from bs4 import BeautifulSoup
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
-def fetch_html(url: str, timeout: int = 20) -> str:
-    """Fetch HTML with proper headers via a session. Handles redirects and attempts to solve simple CAPTCHAs."""
+REQUEST_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0 Safari/537.36",
+    # Add other headers if needed
+}
+
+def fetch_html(url: str, timeout: int = 20, use_selenium_if_needed=True) -> str:
+    """Fetch HTML with requests; if content is incomplete or JS rendered, fallback to Selenium."""
     session = requests.Session()
     session.headers.update(REQUEST_HEADERS)
+    
     resp = session.get(url, timeout=timeout, allow_redirects=True)
-    # Log redirect chain
     if resp.history:
         print(f"Redirects for {url}:")
         for r in resp.history:
@@ -285,10 +295,10 @@ def fetch_html(url: str, timeout: int = 20) -> str:
         print(f"Final URL: {resp.url}")
     resp.raise_for_status()
     html = resp.text
-    
+
     # CAPTCHA detection and handling
     lower_html = html.lower()
-    captcha_indicators = ["captcha", "verify", "robot"]  # Removed recaptcha/cloudflare (too complex)
+    captcha_indicators = ["captcha", "verify", "robot"]
     
     if any(word in lower_html for word in captcha_indicators):
         print(f"CAPTCHA detected for {url}. Attempting to solve...")
@@ -296,9 +306,35 @@ def fetch_html(url: str, timeout: int = 20) -> str:
             html = handle_captcha_form(session, resp.url, html)
             print("CAPTCHA solved successfully!")
         except Exception as e:
-            raise RuntimeError(f"CAPTCHA detected for {url} but failed to solve: {str(e)}. Manual intervention required.")
-    
+            raise RuntimeError(f"CAPTCHA detected for {url} but failed to solve: {str(e)}")
+
+    # Check if the page content looks incomplete (e.g., contains 'Loading...')
+    if use_selenium_if_needed and ("loading" in html.lower() or len(html) < 1000):
+        print("Content seems incomplete, trying with Selenium to render JS...")
+        html = fetch_html_with_selenium(url)
+        
     return html
+
+
+
+def fetch_html_with_selenium(url: str) -> str:
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--window-size=1920,1080")
+
+    driver = webdriver.Chrome(options=chrome_options)
+    driver.get(url)
+    time.sleep(5)  # Wait for JS to load the content, you may increase if needed
+    html = driver.page_source
+    driver.quit()
+    return html
+
 
 
 class DetectDataFormatStep:
