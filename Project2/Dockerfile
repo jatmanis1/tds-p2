@@ -43,14 +43,15 @@ RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add
     rm -rf /var/lib/apt/lists/*
 
 # Install Chromedriver matching installed Chrome version
-RUN CHROME_VERSION_FULL=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+') && \
-    echo "Detected Chrome version: $CHROME_VERSION_FULL" && \
-    CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION_FULL}") && \
+RUN CHROME_VERSION_MAJOR_MINOR=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+') && \
+    echo "Detected Chrome major.minor version: $CHROME_VERSION_MAJOR_MINOR" && \
+    CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION_MAJOR_MINOR}") && \
     echo "Using Chromedriver version: $CHROMEDRIVER_VERSION" && \
     wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" && \
     unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
     rm /tmp/chromedriver.zip && \
     chmod +x /usr/local/bin/chromedriver
+
 
 # Copy only requirements first (for caching)
 COPY requirements.txt .
