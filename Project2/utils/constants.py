@@ -122,7 +122,7 @@ ENGLISH_STOPWORDS = {
 
 # Content selectors for non - table data extraction
 CONTENT_SELECTORS = [
-    ".chart", ".data - table", ".list", ".grid", ".content",
+    ".chart", ".data-table", ".list", ".grid", ".content",
     "[class*='chart']", "[class*='table']", "[class*='list']",
 ]
 
