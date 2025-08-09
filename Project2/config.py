@@ -9,7 +9,9 @@ API_VERSION = "v1"
 TIMEOUT = 180  # seconds
 
 # LangChain Configuration
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_API_KEY ="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"
+
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")  # Added for Gemini
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false")
 LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
