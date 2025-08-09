@@ -4,66 +4,37 @@ FROM python:3.10-slim
 # Set working directory
 WORKDIR /app
 
-
-# Install system dependencies for Chrome, Chromedriver, OCR, and Python libs
+# Install dependencies for Chrome, Chromedriver, Tesseract OCR, and other libs
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    unzip \
-    curl \
-    gnupg \
-    ca-certificates \
-    fonts-liberation \
-    libglib2.0-0 \
-    libnss3 \
-    libx11-xcb1 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxext6 \
-    libxfixes3 \
-    libxi6 \
-    libxtst6 \
-    libxrandr2 \
-    libasound2 \
-    libatk1.0-0 \
-    libcups2 \
-    libatk-bridge2.0-0 \
-    libpangocairo-1.0-0 \
-    libxshmfence1 \
-    tesseract-ocr \
-    tesseract-ocr-eng \
-    build-essential \
-    python3-dev \
+    wget unzip gnupg2 curl ca-certificates fonts-liberation libglib2.0-0 libnss3 libx11-xcb1 libxcomposite1 libxcursor1 libxdamage1 libxi6 libxtst6 libxrandr2 libasound2 libatk1.0-0 libcups2 libpangocairo-1.0-0 libxss1 xdg-utils libgbm1 libpango-1.0-0 libpangocairo-1.0-0 tesseract-ocr tesseract-ocr-eng build-essential gcc libsm6 libxext6 libxrender-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Add Google Chrome repo and install stable Chrome
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add - && \
-    echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list && \
-    apt-get update && apt-get install -y google-chrome-stable && \
-    rm -rf /var/lib/apt/lists/*
+# Install Google Chrome (pinned version)
+ENV CHROME_VERSION=114.0.5735.90
 
-# Install Chromedriver matching installed Chrome version
-RUN CHROME_VERSION_MAJOR_MINOR=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+') && \
-    echo "Detected Chrome major.minor version: $CHROME_VERSION_MAJOR_MINOR" && \
-    CHROMEDRIVER_VERSION=$(curl -sS "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${CHROME_VERSION_MAJOR_MINOR}") && \
-    echo "Using Chromedriver version: $CHROMEDRIVER_VERSION" && \
-    wget -O /tmp/chromedriver.zip "https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip" && \
-    unzip /tmp/chromedriver.zip -d /usr/local/bin/ && \
-    rm /tmp/chromedriver.zip && \
-    chmod +x /usr/local/bin/chromedriver
+RUN wget -q -O /tmp/google-chrome-stable_current_amd64.deb https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
+    && dpkg -i /tmp/google-chrome-stable_current_amd64.deb || apt-get -fy install \
+    && rm /tmp/google-chrome-stable_current_amd64.deb
 
+# Install matching Chromedriver
+ENV CHROMEDRIVER_VERSION=114.0.5735.90
 
-# Copy only requirements first (for caching)
+RUN wget -O /tmp/chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip \
+    && unzip /tmp/chromedriver.zip -d /usr/local/bin/ \
+    && rm /tmp/chromedriver.zip \
+    && chmod +x /usr/local/bin/chromedriver
+
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the app code
+# Copy app code
 COPY . .
 
-# Expose the port your FastAPI app listens on
+# Expose port (for FastAPI)
 EXPOSE 80
 
-# Run the FastAPI app with uvicorn
+# Command to run your app
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "80"]
